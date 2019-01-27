@@ -9,18 +9,24 @@
   tasks:
   - name: Listando as VMs do cluster
     vcd_vapp:
-        vapp_name: "k8s-cluster"
+        vapp_name: "k8s-masters"
         vdc: "Baena"
         operation: "list_vms"
-    register: vms
+    register: masters
+  - vcd_vapp:
+        vapp_name: "k8s-nodes"
+        vdc: "Baena"
+        operation: "list_vms"
+    register: nodes
   - template:
       src: etc/hosts.j2
       dest: etc/hosts
-    vars:
-      hosts: "{{ vms.msg }}"
-  - command: /bin/echo "{{ item }}"
-    with_items:
-      - "{{ vms.msg }}"
+#    vars:
+#      masters: "{{ masters.msg }}"
+#      nodes: "{{ nodes.msg }}"
+    ignore_errors: True
+  - debug:
+      msg: "{{ masters.msg }}  {{ nodes.msg }}"
     
 #  - name: list vapp vm nics
 #    vcd_vapp_vm:

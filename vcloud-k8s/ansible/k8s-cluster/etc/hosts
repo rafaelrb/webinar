@@ -5,7 +5,8 @@
 ff02::1 ip6-allnodes
 ff02::2 ip6-allrouters
 
-10.0.0.20      node02
 10.0.0.10      master
 10.0.0.21      node03
+10.0.0.20      node02
 10.0.0.19      node01
+

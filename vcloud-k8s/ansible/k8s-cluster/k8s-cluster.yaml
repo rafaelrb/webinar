@@ -1,31 +1,44 @@
----
-- name: Setup do cluster Kubernetes
-  hosts: all
+- name: Listando as VMs do cluster
+  hosts: localhost
   environment:
     env_user: rbaena
     env_password: P0de5erV0ce!!
     env_host: vmware.cloudmandic.com.br            
     env_org: Baena             
     env_verify_ssl_certs: False
-  
   tasks:
-  - name: Listando as VMs do cluster
+  - name: Registrando variavel sobre as VMs
     vcd_vapp:
-      vapp_name: "k8s-cluster"
+      vapp_name: "k8s-masters"
       vdc: "Baena"
       operation: "list_vms"
-    register: vms
-    
+    register: masters
+  - vcd_vapp:
+      vapp_name: "k8s-nodes"
+      vdc: "Baena"
+      operation: "list_vms"
+    register: nodes
   - name: File /etc/hosts
     template:
       src: etc/hosts.j2
+      dest: etc/hosts
+  - copy:
+      src: etc/hosts
+      dest: /etc/hosts
+      mode: 0644
+    become: yes
+
+- name: Setup do cluster Kubernetes
+  hosts: k8s-masters,k8s-nodes
+  tasks:
+  - name: Copiando arquivo /etc/hosts
+    copy:
+      src: etc/hosts
       dest: /etc/hosts
       owner: root
       mode: 0644
     become: yes
-    vars:
-      hosts: "{{ vms.msg }}"
-      
+    
   - name: Arquivos SSH
     copy:
       src: ssh/{{ item }}
@@ -87,7 +100,7 @@
     become: yes
 
 - name: Configurando servidor master do cluster
-  hosts: masters
+  hosts: k8s-masters
   tasks:
     - name: Kubeadm init
       command: kubeadm init --pod-network-cidr=192.168.0.0/16 
@@ -154,7 +167,7 @@
     - debug: msg="{{masterip.stdout}}"
 
 - name: Setup nodes
-  hosts: nodes
+  hosts: k8s-nodes
   tasks:
     - name: Copiando o script de insercao do node no cluster
       command: scp master:/tmp/join.sh /tmp/join.sh

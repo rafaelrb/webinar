@@ -9,22 +9,25 @@
   tasks:
    - name: create vapp
      vcd_vapp:
-       vapp_name: "k8s-cluster"
+       vapp_name: "{{item.name}}"
        vdc: "Baena"
        power_on: true
        network: "netprod"
        state: "present"
+     with_items:
+     - { name: k8s-masters }
+     - { name: k8s-nodes }
 
    - name: create vapp vm from catalog
      vcd_vapp_vm:
       target_vm_name: "{{item.name}}"
-      target_vapp: "k8s-cluster"
+      target_vapp: "{{item.vapp}}"
       source_vdc: "Baena"
       target_vdc: "Baena"
       source_catalog_name: "baena_linux"
       source_template_name: Ubuntu16
       source_vm_name: Ubuntu16
-      hostname: "k8s-master"
+      hostname: "{{item.name}}"
       vmpassword: "P@ssw0rd" 
       vmpassword_auto: "false"
       vmpassword_reset: "false"
@@ -37,7 +40,7 @@
       deploy: true
       state: "present"
      with_items:
-      - { name: master }
-      - { name: node01 }
-      - { name: node02 }
-      - { name: node03 }
+      - { name: master, vapp: k8s-masters }
+      - { name: node01, vapp: k8s-nodes }
+      - { name: node02, vapp: k8s-nodes }
+      - { name: node03, vapp: k8s-nodes }
