@@ -1,0 +1,28 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: db-storage
+  labels:
+    app: wordpress
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: slow
+  resources:
+    requests:
+      storage: 8Gi
+---
+
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: wp-uploads
+  labels:
+    app: wordpress
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: slow
+  resources:
+    requests:
+      storage: 2Gi
