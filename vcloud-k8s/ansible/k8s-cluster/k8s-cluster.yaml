@@ -1,0 +1,173 @@
+---
+- name: Setup do cluster Kubernetes
+  hosts: all
+  tasks:
+  - name: Listando as VMs do cluster
+    vcd_vapp:
+      vapp_name: "k8s-cluster"
+      vdc: "Baena"
+      operation: "list_vms"
+    register: vms
+    
+  - name: File /etc/hosts
+    template:
+      src: etc/hosts.j2
+      dest: /etc/hosts
+      owner: root
+      mode: 0644
+    become: yes
+    vars:
+      hosts: "{{ vms.msg }}"
+      
+  - name: Arquivos SSH
+    copy:
+      src: ssh/{{ item }}
+      dest: ~/.ssh/{{ item }}
+      owner: ubuntu
+      group: ubuntu
+      mode: 0600
+    with_items:
+      - id_rsa
+      - authorized_keys
+      - id_rsa.pub
+      - config
+
+  - name: Instalando pacotes necessarios
+    apt:
+      name: "{{ packages }}"
+      state: latest
+    vars:
+      packages:
+      - apt-transport-https
+      - curl
+      - docker.io
+      - glusterfs-client
+      state: present
+    become: yes
+  - name: Adicionando repositorio Kubeadm 
+    apt_repository:
+      repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
+      state: present
+    become: yes
+  - name: Adicionando chaves APT
+    apt_key:
+      url: https://packages.cloud.google.com/apt/doc/apt-key.gpg 
+      state: present
+    become: yes
+  - name: Atualizando repositorios
+    apt:
+      update_cache: yes
+    become: yes
+  - name: Instalando kubeadm, kubectl e kubelet
+    apt:
+      name: "{{ packages }}"
+      state: present
+    vars:
+      packages:
+      - kubelet
+      - kubeadm
+      - kubectl
+    become: yes
+  - name: Configurando inicializacao do servico kubelet
+    systemd:
+      name: kubelet.service
+      state: started
+    become: yes
+  - name: Configurando inicializacao do servico docker
+    systemd:
+      name: docker.service
+      state: started
+    become: yes
+
+- name: Configurando servidor master do cluster
+  hosts: masters
+  tasks:
+    - name: Kubeadm init
+      command: kubeadm init --pod-network-cidr=192.168.0.0/16 
+      register: mytoken
+      become: yes
+      ignore_errors: yes
+
+    - name: Criando diretorio do usuario para o kubectl
+      file:
+        path: /home/ubuntu/.kube
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+
+    - name: Configurando kubectl do usuario
+      copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /home/ubuntu/.kube/config
+        owner: ubuntu
+        group: ubuntu
+        remote_src: yes
+      become: yes
+
+    - name: Copiando scripts de configuracao do cluster
+      copy: 
+        src: script/{{item}}
+        dest: /tmp/{{item}}
+        owner: root
+        mode: 0755
+      become: yes
+      with_items:
+      - token.sh
+      - hash.sh
+      - getip.sh
+      - callico.sh
+      - rbac-kdd.yaml
+      - callico.yaml
+
+    - name: Gerando hash do cluster
+      command: /tmp/hash.sh
+      register: hash
+      become: yes
+    - name: Recebendo o token do cluster
+      command: /tmp/token.sh
+      register: mytoken
+    - name: Identificando o ip principal do node
+      command: /tmp/getip.sh
+      register: masterip
+      become: yes
+    - name: Configurando rede com o plugin Calico
+      command: /tmp/callico.sh
+      #become: yes
+      ignore_errors: true
+    - name: Criando script para inserir o node no cluster
+      copy:
+        content: "#!/bin/bash\n\nkubeadm join {{ masterip.stdout }}:6443 --token {{ mytoken.stdout }} --discovery-token-ca-cert-hash sha256:{{ hash.stdout }}\n"
+        dest: /tmp/join.sh
+        owner: root
+        mode: 0755
+      become: yes
+
+    - debug: msg="{{hash.stdout}}"
+    - debug: msg="{{mytoken}}"
+    - debug: msg="{{masterip.stdout}}"
+
+- name: Setup nodes
+  hosts: nodes
+  tasks:
+    - name: Copiando o script de insercao do node no cluster
+      command: scp master:/tmp/join.sh /tmp/join.sh
+      ignore_errors: true
+    - name: Ajustando permissao do script 
+      file:
+       path: /tmp/join.sh
+       owner: root
+       group: root
+       mode: 0755
+      become: yes
+    - name: Inserindo o node no cluster
+      command: /tmp/join.sh
+      become: yes
+      ignore_errors: true
+    - name: Apagando os arquivos temporarios
+      file:
+       path: /tmp/join.sh
+       owner: root
+       group: root
+       mode: 0755
+       state: absent
+      become: yes

@@ -1,0 +1,30 @@
+- name: vCloudDirectorAnsible
+  hosts: localhost
+  environment:
+        env_user: rbaena
+        env_password: P0de5erV0ce!!
+        env_host: vmware.cloudmandic.com.br            
+        env_org: Baena             
+        env_verify_ssl_certs: False
+  tasks:
+  - name: Listando as VMs do cluster
+    vcd_vapp:
+        vapp_name: "k8s-cluster"
+        vdc: "Baena"
+        operation: "list_vms"
+    register: vms
+  - template:
+      src: etc/hosts.j2
+      dest: etc/hosts
+    vars:
+      hosts: "{{ vms.msg }}"
+  - command: /bin/echo "{{ item }}"
+    with_items:
+      - "{{ vms.msg }}"
+    
+#  - name: list vapp vm nics
+#    vcd_vapp_vm:
+#      target_vm_name: "test_vm"
+#      target_vapp: "web2"
+#      target_vdc: "test_vdc"
+#      operation: "list_nics"
