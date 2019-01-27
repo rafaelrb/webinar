@@ -3,10 +3,11 @@ kind: Secret
 metadata:
   name: heketi-secret
   namespace: default
+data:
+  key: TXkgU2VjcmV0Cg==
 type: kubernetes.io/glusterfs
-  data:
-    key: TXkgU2VjcmV0Cg==
 
+---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
