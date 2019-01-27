@@ -1,6 +1,13 @@
 ---
 - name: Setup do cluster Kubernetes
   hosts: all
+  environment:
+    env_user: rbaena
+    env_password: P0de5erV0ce!!
+    env_host: vmware.cloudmandic.com.br            
+    env_org: Baena             
+    env_verify_ssl_certs: False
+  
   tasks:
   - name: Listando as VMs do cluster
     vcd_vapp:
