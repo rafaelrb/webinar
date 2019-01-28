@@ -11,7 +11,8 @@ spec:
     spec:
       containers:
       - name: wordpress
-        image: wordpress:4-php7.0
+        image: rafaelrb/wordpress-webinar:latest
+        #image: wordpress:4-php7.0
         # uncomment to fix perm issue, see also https://github.com/kubernetes/kubernetes/issues/2630
         # command: ['bash', '-c', 'mkdir -p /var/www/html/wp-content/uploads; chown www-data:www-data /var/www/html/wp-content/uploads && docker-entrypoint.sh apache2-foreground']
         ports:
@@ -66,8 +67,7 @@ spec:
           - name: WORDPRESS_DB_HOST
             value: wordpress-db
         volumeMounts:
-#        - mountPath: /var/www/html/wp-content/uploads
-        - mountPath: /var/www
+        - mountPath: /var/www/html/wp-content/uploads
           name: uploads
       volumes:
       - name: uploads
