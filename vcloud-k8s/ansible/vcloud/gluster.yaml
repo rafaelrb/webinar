@@ -1,0 +1,60 @@
+- name: vCloudDirectorAnsible
+  hosts: localhost
+  environment:
+        env_user: rbaena
+        env_password: P0de5erV0ce!!
+        env_host: vmware.cloudmandic.com.br            
+        env_org: Baena             
+        env_verify_ssl_certs: False
+  tasks:
+   - name: create vapp
+     vcd_vapp:
+       vapp_name: "{{item.name}}"
+       vdc: "Baena"
+       power_on: true
+       network: "netprod"
+       state: "present"
+     with_items:
+     - { name: gluster }
+
+   - name: create vapp vm from catalog
+     vcd_vapp_vm:
+      target_vm_name: "{{item.name}}"
+      target_vapp: "{{item.vapp}}"
+      source_vdc: "Baena"
+      target_vdc: "Baena"
+      source_catalog_name: "baena_linux"
+      source_template_name: Fedora29
+      source_vm_name: Fedora29
+      hostname: "{{item.name}}"
+      vmpassword: "P@ssw0rd" 
+      vmpassword_auto: "false"
+      vmpassword_reset: "false"
+      ip_allocation_mode: "pool"
+      power_on: "true"
+      all_eulas_accepted: "true"
+      storage_profile: "SSD"
+      network: "netprod"
+      #cust_script: "test_script"
+      deploy: true
+      state: "present"
+     with_items:
+      - { name: heketi, vapp: gluster }
+      - { name: glusterfs01, vapp: gluster }
+      - { name: glusterfs02, vapp: gluster }
+      - { name: glusterfs03, vapp: gluster }
+
+   - name: create vapp vm additional disk
+     vcd_vapp_vm_disk:
+       vm_name: "{{item.name}}"
+       vapp: "{{item.vapp}}"
+       vdc: "Baena"
+       size: "307200"
+       state: "present"
+     with_items:
+      - { name: glusterfs01, vapp: gluster }
+      - { name: glusterfs02, vapp: gluster }
+      - { name: glusterfs03, vapp: gluster }
+       
+
+
